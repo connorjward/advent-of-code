@@ -1,0 +1,30 @@
+import sys
+
+NEW_BREED_GAP = 9
+BREED_GAP = 7
+NDAYS = 80
+
+
+def read_file(filename):
+    fish = [0] * NEW_BREED_GAP
+    with open(filename) as f:
+        for val in f.readline().split(","):
+            fish[int(val)] += 1
+    return fish
+
+
+def breed(fish):
+    breeders = list(range(BREED_GAP, len(fish), BREED_GAP)) + [9]
+    breakpoint()
+    new_fish_count = sum(fish[-i] for i in breeders)
+    fish.append(new_fish_count)
+
+
+if __name__ == "__main__":
+    infile = sys.argv[1]
+    fish = read_file(infile)
+
+    for _ in range(NDAYS):
+        breed(fish)
+
+    print(f"final fish count: {len(fish)}")
