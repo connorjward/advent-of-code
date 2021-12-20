@@ -2,9 +2,7 @@ import bisect
 from functools import cached_property
 
 import numpy as np
-# need to do depth first search. get leaves with shortest current path.
 
-# assume only down and right
 # INFILE = "demo.txt"
 INFILE = "puzzle.txt"
 
@@ -114,8 +112,21 @@ def select_next_path(cavern, possible_paths):
 
 def read_file(filename):
     with open(filename) as f:
-        cavern = [[int(c) for c in l.strip()] for l in f.readlines()]
-        return np.array(cavern, dtype=int)
+        subcavern = [[int(c) for c in l.strip()] for l in f.readlines()]
+        subcavern = np.array(subcavern, dtype=int)
+
+    # expand it
+    ny,nx = subcavern.shape
+    cavern = np.empty((ny*5,nx*5), dtype=int)
+    for j in range(5):
+        for i in range(5):
+            for (y, x), val in np.ndenumerate(subcavern):
+                newval = val + i + j
+                if newval > 9:
+                    newval -= 9
+                cavern[y+ny*j, x+nx*i] = newval 
+
+    return cavern
 
 
 if __name__ == "__main__":
