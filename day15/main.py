@@ -46,6 +46,7 @@ def search(cavern):
     m, n = cavern.shape
     paths = [initial_path(cavern)]
     scores = [0]
+    seen_locs = set()
 
     while True:
         path = paths.pop(0)
@@ -53,16 +54,38 @@ def search(cavern):
 
         last_step = path.steps[-1]
 
+        # must already have shorter path to this point - abort
+        if (last_step.x, last_step.y) in seen_locs:
+            continue
+
+        seen_locs.add((last_step.x, last_step.y))
+
         if last_step.x == n-1 and last_step.y == m-1:
             return path
 
+        # left
+        if last_step.x > 0:
+            new_path = path + Step.from_cavern(cavern, last_step.x-1, last_step.y)
+            idx = bisection_search(scores, new_path.score)
+            paths.insert(idx, new_path)
+            scores.insert(idx, new_path.score)
+
+        # up
+        if last_step.y > 0:
+            new_path = path + Step.from_cavern(cavern, last_step.x, last_step.y-1)
+            idx = bisection_search(scores, new_path.score)
+            paths.insert(idx, new_path)
+            scores.insert(idx, new_path.score)
+
         if last_step.x + 1 < n:
-            new_path = path + Step.from_cavern(cavern, last_step.x+1, last_step.y)
+            loc = last_step.x+1, last_step.y
+            new_path = path + Step.from_cavern(cavern, *loc)
             idx = bisection_search(scores, new_path.score)
             paths.insert(idx, new_path)
             scores.insert(idx, new_path.score)
         if last_step.y + 1 < m:
-            new_path = path + Step.from_cavern(cavern, last_step.x, last_step.y+1)
+            loc = last_step.x, last_step.y+1
+            new_path = path + Step.from_cavern(cavern, *loc)
             idx = bisection_search(scores, new_path.score)
             paths.insert(idx, new_path)
             scores.insert(idx, new_path.score)
