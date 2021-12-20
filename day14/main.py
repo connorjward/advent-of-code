@@ -1,62 +1,83 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 import re
 import time
 
+import numpy as np
+
 
 # INFILE = "demo.txt"
 INFILE = "puzzle.txt"
+# NSTEPS = 10
 NSTEPS = 40
 
 
-class Polymeriser:
+def read_file(filename):
+    with open(filename) as f:
+        template = [c for c in f.readline().strip()]
 
-    def __init__(self, template, rules):
-        self._template = template
-        self._rules = rules
-        self._counter = Counter()
+        # discard empty line
+        f.readline()
 
-    def polymerise(self, nsteps):
-        for e1, e2 in zip(self._template, self._template[1:]):
-            self._counter += self._polymerise(e1, e2, nsteps) 
-        return self._counter
+        rules = {}
+        for line in f.readlines():
+            match = re.fullmatch("(\w)(\w) -> (\w)", line.strip())
+            left, right, inner = match.groups()
+            rules[left, right] = (left, inner), (inner, right)
 
-    @classmethod
-    def from_file(cls, filename):
-        with open(filename) as f:
-            template = [c for c in f.readline().strip()]
+    return template, rules
 
-            # discard empty line
-            f.readline()
 
-            rules = {}
-            for line in f.readlines():
-                match = re.fullmatch("(\w)(\w) -> (\w)", line.strip())
-                left, right, inner = match.groups()
-                rules[left, right] = (left, inner), (inner, right)
+def template2vector(template, rules):
+    m = len(rules)
+    vec = np.zeros((m), dtype=int)
 
-        return cls(template, rules)
-        
-    # counter is really slow...
-    @lru_cache
-    def _polymerise(self, elem1, elem2, depth):
-        (e1, e2), (_, e3) = self._rules[elem1, elem2]
+    for pair in zip(template, template[1:]):
+        vec[list(rules.keys()).index(pair)] += 1
 
-        if depth == 1:
-            return Counter([e1, e2, e3])
-        else:
-            counter = self._polymerise(e1, e2, depth-1) + self._polymerise(e2, e3, depth-1)
-            counter[e2] -= 1  # remove duplicate
-            return counter
+    return vec
+
+
+def vector2dict(vec, rules):
+    return {key: i for i, (key, _) in enumerate(rules.items())}
+
+
+def count_occurrences(vec, rules, end_elem):
+    tuple_dict = vector2dict(vec, rules)
+
+    counter = defaultdict(int)
+    for (e1, _), idx in tuple_dict.items():
+        # only do e1 since e2 is duplicated
+        counter[e1] += vec[idx]
+
+    # add end entry
+    counter[end_elem] += 1
+
+    return counter
+
+
+def rules2matrix(rules):
+    m = len(rules)
+    mat = np.zeros((m, m), dtype=int)
+
+    for i, (key, val) in enumerate(rules.items()):
+        pair1, pair2 = val
+        mat[list(rules.keys()).index(pair1), i] = 1
+        mat[list(rules.keys()).index(pair2), i] = 1
+
+    return mat
             
             
 if __name__ == "__main__":
-    polymeriser = Polymeriser.from_file(INFILE)
-    counter = polymeriser.polymerise(NSTEPS)
+    template, rules = read_file(INFILE)
 
-    count = counter.most_common()
-    most_common = count[0]
-    least_common = count[-1]
+    mat = rules2matrix(rules)
+    vec = template2vector(template, rules)
 
-    print(f"final value: {most_common[1]-least_common[1]}")
+    for _ in range(NSTEPS):
+        vec = mat @ vec
+
+    counter = count_occurrences(vec, rules, template[-1])
+
+    print(f"result: {max(counter.values())-min(counter.values())}")
