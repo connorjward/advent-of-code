@@ -1,0 +1,125 @@
+import collections
+from collections import defaultdict
+from dataclasses import dataclass
+import itertools
+
+import numpy as np
+
+
+INPUT = 4, 8  # demo
+# INPUT = 8, 5  # actual
+
+BOARD_SIZE = 10
+MAX_SCORE = 21
+
+
+class DeterministicDice:
+
+    def __init__(self):
+        self._counter = itertools.cycle(range(1, 101))
+        self.nrolls = 0
+
+    def roll(self):
+        self.nrolls += 1
+        return next(self._counter)
+
+
+def generate_dirac_rolls():
+    rolls = collections.Counter()
+    for a, b, c in itertools.product(range(1, 4), range(1, 4), range(1, 4)):
+        rolls[a+b+c] += 1
+    return rolls
+
+
+DIRAC_ROLLS = generate_dirac_rolls()
+
+
+@dataclass
+class Player:
+
+    pos: int
+    score: int = 0
+
+    def copy(self):
+        return type(self)(self.pos, self.score)
+
+
+def find_ways_to_win(player):
+    wtw = []
+    for roll in DIRAC_ROLLS.keys():
+        pl = player.copy()
+        wtw.extend(play_single(pl, roll))
+    return wtw
+
+
+def playtest(start, moves):
+    player = Player(start)
+
+    for move in moves:
+        print(f"move: {move}")
+        print(f"player: {player}")
+        print()
+        player.pos = (player.pos + move) % BOARD_SIZE
+        player.score += player.pos + 1  # account for zero-based indexing
+
+    print(f"player: {player}")
+
+
+def play_single(player, move):
+    player.pos = (player.pos + move) % BOARD_SIZE
+    player.score += player.pos + 1  # account for zero-based indexing
+
+    if player.score >= MAX_SCORE:
+        return [[move]]
+
+    movess = []
+    for roll in DIRAC_ROLLS.keys():
+        for mvs in play_single(player.copy(), roll):
+            movess.append([move] + mvs)
+    return movess
+
+
+def calculate_dirac_score(wtw):
+    """How many times will this get rolled?"""
+    return np.prod([DIRAC_ROLLS[roll] for roll in wtw], dtype=int)
+
+
+def postprocess_ways_to_win(wstw):
+    counter = {}
+    for wtw in wstw:
+        if len(wtw) not in counter:
+            counter[len(wtw)] = [0]*len(wtw)
+
+        for i in range(len(wtw)):
+            counter[len(wtw)][i] += calculate_dirac_score(wtw[:i+1])
+    return counter
+
+
+if __name__ == "__main__":
+    # subtract due to zero-based indexing
+    pos1, pos2 = INPUT
+    p1 = Player(pos1-1)
+    p2 = Player(pos2-1)
+
+    wstw1 = find_ways_to_win(p1)
+    wstw2 = find_ways_to_win(p2)
+    # breakpoint()
+    wstw1 = postprocess_ways_to_win(wstw1)
+    wstw2 = postprocess_ways_to_win(wstw2)
+    # breakpoint()
+
+    p1_wins, p2_wins = 0, 0
+    for len1, len2 in itertools.product(wstw1.keys(), wstw2.keys()):
+        if len1 <= len2:
+            # player 1 wins
+            # need to account for the fact that the rest of len2 never happens
+            p1_wins += wstw1[len1][-1] * wstw2[len2][len1-2]
+        else:
+            # player 2 wins
+            p2_wins += wstw2[len2][-1] * wstw1[len1][len2-1]
+
+    actual= 444356092776315
+    # breakpoint()
+
+    print(f"player1 wins: {p1_wins:e}")
+    print(f"player2 wins: {p2_wins:e}")

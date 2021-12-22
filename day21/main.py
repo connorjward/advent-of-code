@@ -1,3 +1,11 @@
+"""My brute force solution is deeply horrible. I believe that there
+is a clever way to do it by interleaving the routes for each player to win
+but I couldn't get it to work.
+
+I don't think matrices would work here to get linear scaling because the scoring system
+is weird so one would still have an exponentially growing number of scores to
+look after.
+"""
 import collections
 from dataclasses import dataclass
 import itertools
@@ -5,22 +13,15 @@ import itertools
 import numpy as np
 
 
-INPUT = 4, 8  # demo
-# INPUT = 8, 5  # actual
+# INPUT = 4, 8  # demo
+INPUT = 8, 5  # actual
 
 BOARD_SIZE = 10
-MAX_SCORE = 12
+MAX_SCORE = 21
 
 
-class DeterministicDice:
-
-    def __init__(self):
-        self._counter = itertools.cycle(range(1, 101))
-        self.nrolls = 0
-
-    def roll(self):
-        self.nrolls += 1
-        return next(self._counter)
+gp1_wins = 0
+gp2_wins = 0
 
 
 def generate_dirac_rolls():
@@ -43,34 +44,67 @@ class Player:
         return type(self)(self.pos, self.score)
 
 
-def update_player(player, move):
-    player.pos = (player.pos + move) % BOARD_SIZE
-    player.score += player.pos + 1  # account for zero-based indexing
+def playtest(start, moves):
+    player = Player(start)
+
+    for move in moves:
+        print(f"move: {move}")
+        print(f"player: {player}")
+        print()
+        player.pos = (player.pos + move) % BOARD_SIZE
+        player.score += player.pos + 1  # account for zero-based indexing
+
+    print(f"player: {player}")
 
 
-def play(player1, player2, ngames):
-    if player1.score >= MAX_SCORE:
-        return np.array([ngames, 0], dtype=int)
-    if player2.score >= MAX_SCORE:
-        return np.array([0, ngames], dtype=int)
+def mything():
+    for roll in DIRAC_ROLLS:
+        if complete:
+            return something
+        applyroll()
+        recurseandchangeactiveplayer()
 
-    wins = np.zeros((2,), dtype=int)
 
-    for move, count in DIRAC_ROLLS.items():
-        p1 = player1.copy()
-        p2 = player2.copy()
+def generate_possible_moves_outer(player1, player2):
+    for roll in DIRAC_ROLLS.keys():
+        generate_possible_moves(player1, player2, [roll], 0)
 
-        update_player(p1, move)
-        wins += play(p1, p2, ngames*count)
 
-    for move, count in DIRAC_ROLLS.items():
-        p1 = player1.copy()
-        p2 = player2.copy()
+def generate_possible_moves(player1, player2, moves, active):
+    player1 = player1.copy()
+    player2 = player2.copy()
 
-        update_player(p2, move)
-        wins += play(p1, p2, ngames*count)
+    if active == 0:
+        active_player = player1
+    else:
+        active_player = player2
 
-    return wins
+    active_player.pos = (active_player.pos + moves[-1]) % BOARD_SIZE
+    active_player.score += active_player.pos + 1  # account for zero-based indexing
+
+    if active_player.score >= MAX_SCORE:
+        if active == 0:
+            global gp1_wins
+            gp1_wins += calculate_dirac_score(moves)
+        else:
+            global gp2_wins
+            gp2_wins += calculate_dirac_score(moves)
+        return
+
+    for roll in DIRAC_ROLLS.keys():
+        generate_possible_moves(player1, player2, moves+[roll], (active+1)%2)
+
+
+def calculate_dirac_score(wtw):
+    """How many times will this get rolled?"""
+    return np.prod([DIRAC_ROLLS[roll] for roll in wtw], dtype=int)
+
+
+def postprocess_ways_to_win(wstw):
+    counter = collections.Counter()
+    for wtw in wstw:
+        counter[len(wtw)] += calculate_dirac_score(wtw)
+    return counter
 
 
 if __name__ == "__main__":
@@ -79,7 +113,7 @@ if __name__ == "__main__":
     p1 = Player(pos1-1)
     p2 = Player(pos2-1)
 
-    breakpoint()
-    wins = play(p1, p2, 1)
+    generate_possible_moves_outer(p1, p2)
 
-    print(f"final result: {max(wins)}")
+    print(f"player1 wins: {gp1_wins}")
+    print(f"player2 wins: {gp2_wins}")
