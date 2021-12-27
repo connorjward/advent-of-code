@@ -131,8 +131,23 @@ def test_process_insns():
     test_process_insns()
 
 
+def get_previous_z(zn, wn, a, b, c):
+    possibles = []
+
+    # first check for x = 0 and x = 1
+    for x in [0, 1]:
+        zprev = (zn - (wn+b)*x)/(25*x+1) 
+
+    # then check to see if x=0,1 is valid
+
+
 if __name__ == "__main__":
     insns = read_file(INFILE)
+
+    zn = 0
+    zprev = get_previous_z(zn, wn, A, B, C)
+
+
 
     possible_numbers = [0]
     for myval in range(14):
