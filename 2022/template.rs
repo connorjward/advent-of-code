@@ -1,8 +1,10 @@
 use std::env;
+use std::fs;
 
 fn main() {
-    match &env::args().collect::<Vec<String>>()[..] {
-        [part, infile] => {
+    let args = env::args().collect::<Vec<String>>();
+    match &args[..] {
+        [_, part, infile] => {
             if part == "1" {
                 do_part1(infile);
             } else if part == "2" {
@@ -15,10 +17,16 @@ fn main() {
     }
 }
 
-fn do_part1(infile: &String) {
-
+fn do_part1(infile: &str) {
+    let contents = fs::read_to_string(infile).unwrap();
+    for line in contents.lines() {
+        println!("{}", line);
+    }
 }
 
-fn do_part2(infile: &String) {
-
+fn do_part2(infile: &str) {
+    let contents = fs::read_to_string(infile).unwrap();
+    for line in contents.lines() {
+        println!("{}", line);
+    }
 }
