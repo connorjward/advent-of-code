@@ -1,3 +1,7 @@
+// For an example see: https://github.com/plul/advent-of-code-2022/blob/master/src/day_07.rs#L132
+// They did basically the same solution as me. Register filesystem nodes by their path and keep in
+// a flat hash map thing.
+
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
